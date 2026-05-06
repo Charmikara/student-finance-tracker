@@ -74,6 +74,10 @@ class Transaction(ABC):
     def date(self) -> str:
         return self._date
 
+    @property
+    def type(self) -> str:
+        return self.get_transaction_type()
+
     def get_transaction_type(self) -> str:
         """
         Must be overridden by subclasses.

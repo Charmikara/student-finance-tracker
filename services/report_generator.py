@@ -1,7 +1,4 @@
 class ReportGenerator:
-    def __init__(self):
-        pass
-
     def generate_report(self, transactions):
         total_income, total_expense = self._calculate_totals(transactions)
         category_spending = self._calculate_category_spending(transactions)
@@ -20,9 +17,9 @@ class ReportGenerator:
         total_expense = 0
 
         for txn in transactions:
-            if txn.type == "income":
+            if txn.get_transaction_type() == "income":
                 total_income += txn.amount
-            elif txn.type == "expense":
+            elif txn.get_transaction_type() == "expense":
                 total_expense += txn.amount
 
         return total_income, total_expense
@@ -31,7 +28,7 @@ class ReportGenerator:
         category_spending = {}
 
         for txn in transactions:
-            if txn.type == "expense":
+            if txn.get_transaction_type() == "expense":
                 if txn.category not in category_spending:
                     category_spending[txn.category] = 0
 

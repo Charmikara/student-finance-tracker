@@ -19,10 +19,11 @@ class WarningSystem:
         warnings = []
 
         for txn in transactions:
-            if txn.type == "expense":
+            if txn.get_transaction_type() == "expense":
                 category_spending[txn.category] += txn.amount
 
-        for category, limit in budget_limits.items():
+        for category, budget_limit in budget_limits.items():
+            limit = getattr(budget_limit, "limit", budget_limit)
             spent = category_spending.get(category, 0)
 
             if spent > limit:
@@ -51,7 +52,7 @@ class WarningSystem:
         category_spending = defaultdict(list)
 
         for txn in transactions:
-            if txn.type == "expense":
+            if txn.get_transaction_type() == "expense":
                 category_spending[txn.category].append(txn.amount)
 
         for category, amounts in category_spending.items():
