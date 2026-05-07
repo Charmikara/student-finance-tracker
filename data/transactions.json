@@ -68,12 +68,5 @@
     "category": "freelancing",
     "description": "art commissions",
     "date": "2026-05-05"
-  },
-  {
-    "type": "income",
-    "amount": 500.0,
-    "category": "freelancing",
-    "description": "Web Dev",
-    "date": "2026-05-07"
   }
 ]

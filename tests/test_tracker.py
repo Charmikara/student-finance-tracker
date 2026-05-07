@@ -66,6 +66,11 @@ def test_file_manager_saves_transactions(tmp_path):
         },
     ]
 
+    reloaded_transactions = FileManager().load_transactions(transactions_file)
+    assert len(reloaded_transactions) == 2
+    assert reloaded_transactions[0].amount == 500
+    assert reloaded_transactions[1].category == "food"
+
 
 def test_file_manager_loads_budgets(tmp_path):
     budgets_file = tmp_path / "budgets.json"
@@ -95,6 +100,10 @@ def test_file_manager_saves_budgets(tmp_path):
         {"category": "food", "limit": 200.0},
         {"category": "transport", "limit": 80.0},
     ]
+
+    reloaded_budgets = FileManager().load_budgets(budgets_file)
+    assert reloaded_budgets["food"].limit == 200
+    assert reloaded_budgets["transport"].limit == 80
 
 
 def test_file_manager_handles_empty_files(tmp_path):
@@ -196,7 +205,37 @@ def test_finance_tracker_loads_from_json_files(tmp_path):
     assert tracker.budgets["food"].limit == 200
 
 
-def test_finance_tracker_loads_sample_data_and_saves_to_active_files(tmp_path):
+def test_finance_tracker_adds_data_and_calculates_balance(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+
+    tracker.add_income(1000, "salary", "part-time work", "2026-05-07")
+    tracker.add_expense(125, "Food", "groceries", "2026-05-07")
+    tracker.add_budget(" food ", 200)
+
+    assert tracker.get_total_income() == 1000
+    assert tracker.get_total_expenses() == 125
+    assert tracker.get_balance() == 875
+    assert tracker.budgets["food"].limit == 200
+
+
+def test_finance_tracker_clears_data(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_income(100, "allowance", "weekly allowance", "2026-05-07")
+    tracker.add_budget("food", 50)
+
+    tracker.clear_data()
+
+    assert tracker.transactions == []
+    assert tracker.budgets == {}
+
+
+def test_finance_tracker_loads_sample_data(tmp_path):
     transactions_file = tmp_path / "transactions.json"
     budgets_file = tmp_path / "budgets.json"
     sample_transactions_file = tmp_path / "sample_transactions.json"
@@ -207,21 +246,14 @@ def test_finance_tracker_loads_sample_data_and_saves_to_active_files(tmp_path):
     sample_transactions_file.write_text(json.dumps([
         {
             "type": "income",
-            "amount": 500,
-            "category": "salary",
-            "description": "part-time job",
-            "date": "2026-05-07",
-        },
-        {
-            "type": "expense",
-            "amount": 50,
-            "category": "food",
-            "description": "groceries",
+            "amount": 300,
+            "category": "allowance",
+            "description": "monthly allowance",
             "date": "2026-05-07",
         },
     ]))
     sample_budgets_file.write_text(json.dumps([
-        {"category": "food", "limit": 200},
+        {"category": "food", "limit": 100},
     ]))
 
     tracker = FinanceTracker(
@@ -232,53 +264,66 @@ def test_finance_tracker_loads_sample_data_and_saves_to_active_files(tmp_path):
     )
 
     tracker.load_sample_data()
-    tracker.save()
-    reloaded = FinanceTracker(transactions_file, budgets_file)
 
-    assert len(reloaded.transactions) == 2
-    assert reloaded.get_balance() == 450
-    assert reloaded.budgets["food"].limit == 200
+    assert len(tracker.transactions) == 1
+    assert tracker.transactions[0].category == "allowance"
+    assert tracker.budgets["food"].limit == 100
 
 
-def test_finance_tracker_clears_data_and_saves_empty_files(tmp_path):
+def test_finance_tracker_backs_up_current_data(tmp_path):
     transactions_file = tmp_path / "transactions.json"
     budgets_file = tmp_path / "budgets.json"
+    backup_dir = tmp_path / "backups"
     transactions_file.write_text(json.dumps([
         {
-            "type": "income",
-            "amount": 500,
-            "category": "salary",
-            "description": "part-time job",
+            "type": "expense",
+            "amount": 20,
+            "category": "food",
+            "description": "lunch",
             "date": "2026-05-07",
         },
     ]))
     budgets_file.write_text(json.dumps([
-        {"category": "food", "limit": 200},
+        {"category": "food", "limit": 100},
     ]))
 
-    tracker = FinanceTracker(transactions_file, budgets_file)
-    tracker.clear_data()
-    tracker.save()
+    tracker = FinanceTracker(
+        transactions_file,
+        budgets_file,
+        tmp_path / "sample_transactions.json",
+        tmp_path / "sample_budgets.json",
+        backup_dir,
+    )
 
-    assert json.loads(transactions_file.read_text()) == []
-    assert json.loads(budgets_file.read_text()) == []
+    backups = tracker.backup_current_data()
+
+    assert len(backups) == 2
+    assert all(path.exists() for path in backups)
+    assert {path.name.split("_")[0] for path in backups} == {"transactions", "budgets"}
 
 
-def test_finance_tracker_deletes_transaction_and_budget(tmp_path):
+def test_finance_tracker_delete_invalid_transaction_index_raises(tmp_path):
     tracker = FinanceTracker(
         tmp_path / "transactions.json",
         tmp_path / "budgets.json",
     )
-    tracker.add_income(500, "salary", "part-time job", "2026-05-07")
-    tracker.add_expense(50, "food", "groceries", "2026-05-07")
-    tracker.add_budget("food", 200)
 
-    tracker.delete_transaction_by_index(0)
-    tracker.delete_budget(" Food ")
+    with pytest.raises(IndexError, match="out of range"):
+        tracker.delete_transaction_by_index(0)
 
-    assert len(tracker.transactions) == 1
-    assert tracker.transactions[0].get_transaction_type() == "expense"
-    assert tracker.budgets == {}
+
+def test_model_validation_rejects_invalid_values():
+    with pytest.raises(ValueError, match="greater than 0"):
+        Income(0, "salary", "job", "2026-05-07")
+
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        Expense(10, "food", "lunch", "05-07-2026")
+
+    with pytest.raises(ValueError, match="Category cannot be empty"):
+        Expense(10, " ", "lunch", "2026-05-07")
+
+    with pytest.raises(ValueError, match="Budget limit must be greater than 0"):
+        Budget("food", 0)
 
 
 def test_report_generator_calculates_summary_and_categories():
@@ -297,6 +342,17 @@ def test_report_generator_calculates_summary_and_categories():
     assert report["category_spending"] == {
         "food": 150,
         "transport": 25,
+    }
+
+
+def test_report_generator_empty_report():
+    report = ReportGenerator().generate_report([])
+
+    assert report == {
+        "total_income": 0,
+        "total_expense": 0,
+        "balance": 0,
+        "category_spending": {},
     }
 
 
@@ -335,6 +391,20 @@ def test_warning_system_detects_food_budget_exceeded():
         "Budget exceeded for food: spent 250.00 / limit 200.00, "
         "exceeded by 50.00"
     )
+
+
+def test_warning_system_formats_low_balance_with_two_decimals():
+    warnings = WarningSystem(low_balance_threshold=100).analyze(
+        [],
+        {},
+        current_balance=50,
+    )
+
+    assert warnings == [{
+        "type": "LOW_BALANCE",
+        "balance": 50,
+        "message": "Balance is low: 50.00",
+    }]
 
 
 def test_warning_system_matches_subscriptions_case_and_whitespace():

@@ -1,24 +1,31 @@
 import json
 import os
+import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 from models.budget import Budget
 from models.expense import Expense
 from models.income import Income
+from models.transaction import Transaction
 
 
 class FileManager:
     TRANSACTION_FIELDS = ("type", "amount", "category", "description", "date")
     BUDGET_FIELDS = ("category", "limit")
 
-    def save_transactions(self, transactions, filename):
+    def save_transactions(
+        self,
+        transactions: list[Transaction],
+        filename: Path | str,
+    ) -> None:
         data = [transaction.to_dict() for transaction in transactions]
         self._write_json(filename, data)
 
-    def load_transactions(self, filename):
+    def load_transactions(self, filename: Path | str) -> list[Transaction]:
         data = self._read_json(filename, [])
-        transactions = []
+        transactions: list[Transaction] = []
 
         for index, item in enumerate(data, start=1):
             self._validate_record(item, self.TRANSACTION_FIELDS, "transaction", index)
@@ -33,13 +40,13 @@ class FileManager:
 
         return transactions
 
-    def save_budgets(self, budgets, filename):
+    def save_budgets(self, budgets: dict[str, Budget], filename: Path | str) -> None:
         data = [budget.to_dict() for budget in budgets.values()]
         self._write_json(filename, data)
 
-    def load_budgets(self, filename):
+    def load_budgets(self, filename: Path | str) -> dict[str, Budget]:
         data = self._read_json(filename, [])
-        budgets = {}
+        budgets: dict[str, Budget] = {}
 
         for index, item in enumerate(data, start=1):
             self._validate_record(item, self.BUDGET_FIELDS, "budget", index)
@@ -60,7 +67,7 @@ class FileManager:
         )
 
     @staticmethod
-    def _read_json(filename, default):
+    def _read_json(filename: Path | str, default: list) -> list:
         path = Path(filename)
         if not path.exists() or path.stat().st_size == 0:
             return default
@@ -79,7 +86,7 @@ class FileManager:
         return data
 
     @staticmethod
-    def _write_json(filename, data):
+    def _write_json(filename: Path | str, data: list) -> None:
         path = Path(filename)
         path.parent.mkdir(parents=True, exist_ok=True)
         temp_path = None
@@ -120,3 +127,21 @@ class FileManager:
                 f"Invalid {record_type} record at position {index}: "
                 f"missing required field(s): {fields}."
             )
+
+    @staticmethod
+    def backup_files(files: list[Path | str], backup_dir: Path | str) -> list[Path]:
+        backup_path = Path(backup_dir)
+        backup_path.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        backups = []
+
+        for filename in files:
+            source = Path(filename)
+            if not source.exists():
+                continue
+
+            destination = backup_path / f"{source.stem}_{timestamp}{source.suffix}"
+            shutil.copy2(source, destination)
+            backups.append(destination)
+
+        return backups

@@ -1,81 +1,56 @@
 # Student Finance Tracker
 
-Student Finance Tracker is a Python object-oriented command-line application for managing simple student finances. It lets users record income and expenses, set category budgets, view reports, receive spending warnings, and save/load data using JSON files.
+Student Finance Tracker is a simple Python OOP application for managing student finances. It includes both an interactive command-line interface and a basic Tkinter GUI, while keeping data storage in JSON files.
 
-This project is designed to be simple, readable, and suitable for university coursework.
+The project is intentionally small and readable for university coursework.
 
 ## Features
 
 - Add income records
 - Add expense records
 - Set category budgets
-- View all transactions
-- Generate finance reports
+- View transactions
+- Generate report summaries
 - View budget status by category
 - Receive warnings for exceeded budgets, low balance, and unusual spending
-- Save and load transactions and budgets with JSON
-- Load separate sample data from the GUI when needed
+- Save and load data with JSON
+- Load optional sample data from separate JSON files
+- Create backups before destructive GUI actions
 
 ## Project Structure
 
 ```text
 student-finance-tracker/
-+-- main.py
-+-- gui.py
-+-- models/
-+-- services/
-+-- utils/
-+-- data/
-+-- tests/
++-- main.py                  # CLI entry point
++-- gui.py                   # Tkinter GUI entry point
++-- models/                  # Transaction, Income, Expense, Budget
++-- services/                # FinanceTracker, reports, warnings
++-- utils/                   # JSON file manager, path helpers, validators
++-- data/                    # Real data, sample data, backups
++-- tests/                   # pytest tests
 +-- requirements.txt
 +-- README.md
 ```
 
-### `main.py`
+## Data Files
 
-Contains the interactive command-line menu. It creates a `FinanceTracker` object, loads existing JSON data, and lets the user choose actions such as adding transactions, viewing reports, checking budgets, and saving data.
+The real user data files start empty:
 
-### `gui.py`
+- `data/transactions.json`
+- `data/budgets.json`
 
-Contains a simple Tkinter interface for the same tracker. It lets the user add income, expenses, and budgets, then refreshes transactions, reports, budget status, and warnings.
+Sample/demo data is stored separately:
 
-The GUI can also load sample data or clear all current data using confirmation dialogs.
+- `data/sample_transactions.json`
+- `data/sample_budgets.json`
 
-### `models/`
+In the GUI, **Load Sample Data** replaces the current real data with sample data after creating a backup. **Reset All Data** clears the current real data after creating a backup.
 
-Contains the main OOP data classes:
+Backups are saved in:
 
-- `Transaction`: base class for financial transactions
-- `Income`: represents income records
-- `Expense`: represents expense records
-- `Budget`: represents a budget for a spending category
-
-### `services/`
-
-Contains the main application logic:
-
-- `FinanceTracker`: manages transactions, budgets, totals, and JSON loading/saving
-- `ReportGenerator`: creates report summaries from transactions
-- `WarningSystem`: creates warnings for exceeded budgets, low balance, and unusual spending
-
-### `utils/`
-
-Contains helper code such as `FileManager`, which handles reading from and writing to JSON files.
-
-### `data/`
-
-Stores sample and saved application data:
-
-- `transactions.json`
-- `budgets.json`
-- `sample_transactions.json`
-- `sample_budgets.json`
-
-The application starts with real user data from `transactions.json` and `budgets.json`. These default files are empty in the repository. Demo records are stored separately in `sample_transactions.json` and `sample_budgets.json`.
-
-### `tests/`
-
-Contains pytest tests for JSON persistence, finance tracker loading, report generation, and warning logic.
+```text
+data/backups/
+```
 
 ## Setup
 
@@ -86,7 +61,7 @@ git clone https://github.com/Charmikara/student-finance-tracker.git
 cd student-finance-tracker
 ```
 
-Create and activate a virtual environment if needed:
+Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
@@ -110,23 +85,13 @@ Install requirements:
 python -m pip install -r requirements.txt
 ```
 
-Run the application:
+## Run The CLI
 
 ```bash
 python main.py
 ```
 
-Run the optional Tkinter GUI:
-
-```bash
-python gui.py
-```
-
-The GUI starts with the real data files. Use `Load Sample Data` to replace the current data with demo records from the separate sample JSON files.
-
-## Sample Usage
-
-When the application runs, it shows this menu:
+CLI menu:
 
 ```text
 Student Finance Tracker
@@ -140,14 +105,20 @@ Student Finance Tracker
 8. Save and exit
 ```
 
-Example workflow:
+## Run The GUI
 
-1. Choose `1` to add income.
-2. Choose `2` to add an expense.
-3. Choose `3` to add or update a budget.
-4. Choose `5` to view a report summary.
-5. Choose `7` to view warnings.
-6. Choose `8` to save and exit.
+```bash
+python gui.py
+```
+
+The GUI includes:
+
+- Dashboard overview
+- Spending-by-category chart
+- Transaction table and form
+- Budget table and form
+- Warnings list
+- Load Sample Data and Reset All Data actions
 
 ## Testing
 
@@ -157,13 +128,10 @@ Run the test suite with:
 python -m pytest
 ```
 
-The tests use temporary files where needed, so they do not depend on or overwrite the real sample JSON files.
+The tests use temporary files and do not overwrite the real JSON data files.
 
 ## Notes
 
-- Real transactions are stored in `data/transactions.json`.
-- Real budgets are stored in `data/budgets.json`.
-- Sample transactions are stored in `data/sample_transactions.json`.
-- Sample budgets are stored in `data/sample_budgets.json`.
 - The project uses JSON storage only.
-- The code is intentionally kept simple to demonstrate core OOP concepts.
+- No database, API, or web framework is required.
+- Runtime backups are ignored by Git, but sample data files are kept in the repository.
