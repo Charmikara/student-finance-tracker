@@ -25,6 +25,7 @@ The project is intentionally small and readable for university coursework.
 student-finance-tracker/
 +-- main.py                  # CLI entry point
 +-- gui.py                   # Tkinter GUI entry point
++-- ui/                      # Tkinter app shell and tab modules
 +-- models/                  # Transaction, Income, Expense, Budget
 +-- services/                # FinanceTracker, reports, warnings
 +-- utils/                   # JSON file manager, path helpers, validators
