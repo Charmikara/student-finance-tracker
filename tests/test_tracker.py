@@ -5,6 +5,7 @@ from models.expense import Expense
 from models.income import Income
 from services.finance_tracker import FinanceTracker
 from services.report_generator import ReportGenerator
+from services.warning_system import WarningSystem
 from utils.file_manager import FileManager
 
 
@@ -142,3 +143,83 @@ def test_report_generator_calculates_summary_and_categories():
         "food": 150,
         "transport": 25,
     }
+
+
+def test_warning_system_detects_food_budget_exceeded():
+    transactions = [
+        Expense(250, "food", "weekly groceries", "2026-05-07"),
+    ]
+    budgets = {
+        "food": Budget("food", 200),
+    }
+
+    warnings = WarningSystem().analyze(transactions, budgets, current_balance=500)
+
+    assert len(warnings) == 1
+    assert warnings[0]["type"] == "BUDGET_EXCEEDED"
+    assert warnings[0]["message"] == (
+        "Budget exceeded for food: spent 250.00 / limit 200.00, "
+        "exceeded by 50.00"
+    )
+
+
+def test_warning_system_matches_subscriptions_case_and_whitespace():
+    transactions = [
+        Expense(60, " Subscriptions ", "music plan", "2026-05-07"),
+        Expense(63, "subscriptions", "cloud storage", "2026-05-07"),
+    ]
+    budgets = {
+        "Subscriptions": Budget("Subscriptions", 100),
+    }
+
+    warnings = WarningSystem().analyze(transactions, budgets, current_balance=500)
+
+    assert len(warnings) == 1
+    assert warnings[0]["category"] == "subscriptions"
+    assert warnings[0]["spent"] == 123
+    assert warnings[0]["limit"] == 100
+    assert warnings[0]["exceeded_amount"] == 23
+    assert warnings[0]["message"] == (
+        "Budget exceeded for subscriptions: spent 123.00 / limit 100.00, "
+        "exceeded by 23.00"
+    )
+
+
+def test_warning_system_returns_multiple_budget_warnings_together():
+    transactions = [
+        Expense(250, "food", "weekly groceries", "2026-05-07"),
+        Expense(123, "subscriptions", "monthly plans", "2026-05-07"),
+    ]
+    budgets = {
+        "food": Budget("food", 200),
+        "subscriptions": Budget("subscriptions", 100),
+    }
+
+    warnings = WarningSystem().analyze(transactions, budgets, current_balance=500)
+    budget_warnings = [
+        warning for warning in warnings
+        if warning["type"] == "BUDGET_EXCEEDED"
+    ]
+
+    assert len(budget_warnings) == 2
+    assert {warning["category"] for warning in budget_warnings} == {
+        "food",
+        "subscriptions",
+    }
+
+
+def test_warning_system_keeps_unusual_spending_with_budget_warning():
+    transactions = [
+        Expense(10, "food", "snack", "2026-05-01"),
+        Expense(10, "food", "lunch", "2026-05-02"),
+        Expense(100, "food", "large shop", "2026-05-03"),
+    ]
+    budgets = {
+        "food": Budget("food", 50),
+    }
+
+    warnings = WarningSystem().analyze(transactions, budgets, current_balance=500)
+
+    warning_types = [warning["type"] for warning in warnings]
+    assert "BUDGET_EXCEEDED" in warning_types
+    assert "UNUSUAL_SPENDING" in warning_types

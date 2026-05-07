@@ -20,19 +20,27 @@ class WarningSystem:
 
         for txn in transactions:
             if txn.get_transaction_type() == "expense":
-                category_spending[txn.category] += txn.amount
+                category = self._normalize_category(txn.category)
+                category_spending[category] += txn.amount
 
         for category, budget_limit in budget_limits.items():
+            normalized_category = self._normalize_category(category)
             limit = getattr(budget_limit, "limit", budget_limit)
-            spent = category_spending.get(category, 0)
+            spent = category_spending.get(normalized_category, 0)
 
             if spent > limit:
+                exceeded_amount = spent - limit
                 warnings.append({
                     "type": "BUDGET_EXCEEDED",
-                    "category": category,
+                    "category": normalized_category,
                     "spent": spent,
                     "limit": limit,
-                    "message": f"{category} budget exceeded by {spent - limit}"
+                    "exceeded_amount": exceeded_amount,
+                    "message": (
+                        f"Budget exceeded for {normalized_category}: "
+                        f"spent {spent:.2f} / limit {limit:.2f}, "
+                        f"exceeded by {exceeded_amount:.2f}"
+                    )
                 })
 
         return warnings
@@ -53,7 +61,8 @@ class WarningSystem:
 
         for txn in transactions:
             if txn.get_transaction_type() == "expense":
-                category_spending[txn.category].append(txn.amount)
+                category = self._normalize_category(txn.category)
+                category_spending[category].append(txn.amount)
 
         for category, amounts in category_spending.items():
             if len(amounts) < 3:
@@ -72,3 +81,7 @@ class WarningSystem:
                 })
 
         return warnings
+
+    @staticmethod
+    def _normalize_category(category):
+        return str(category).strip().lower()

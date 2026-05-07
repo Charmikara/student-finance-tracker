@@ -42,17 +42,31 @@
     "date": "2026-05-07"
   },
   {
-    "type": "income",
-    "amount": 69.0,
-    "category": "fun",
-    "description": "beer",
-    "date": "2026-05-07"
-  },
-  {
     "type": "expense",
-    "amount": 123.0,
+    "amount": 70.0,
     "category": "subscriptions",
     "description": "gym membership",
     "date": "2026-05-06"
+  },
+  {
+    "type": "expense",
+    "amount": 50.0,
+    "category": "subscriptions",
+    "description": "netflix",
+    "date": "2026-05-06"
+  },
+  {
+    "type": "expense",
+    "amount": 250.0,
+    "category": "subscriptions",
+    "description": "ChatGPT Pro",
+    "date": "2026-05-06"
+  },
+  {
+    "type": "income",
+    "amount": 500.0,
+    "category": "freelancing",
+    "description": "art commissions",
+    "date": "2026-05-05"
   }
 ]
