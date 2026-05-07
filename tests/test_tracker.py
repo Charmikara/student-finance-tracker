@@ -133,6 +133,33 @@ def test_file_manager_rejects_malformed_json(tmp_path):
         FileManager().load_transactions(transactions_file)
 
 
+def test_file_manager_loads_utf8_bom_json(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_text(json.dumps([
+        {
+            "type": "income",
+            "amount": 100,
+            "category": "allowance",
+            "description": "weekly allowance",
+            "date": "2026-05-07",
+        },
+    ]), encoding="utf-8-sig")
+
+    transactions = FileManager().load_transactions(transactions_file)
+
+    assert len(transactions) == 1
+    assert transactions[0].get_transaction_type() == "income"
+    assert transactions[0].category == "allowance"
+
+
+def test_file_manager_rejects_non_utf8_json_bytes(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_bytes(b"\xff\xfe\x00\x00")
+
+    with pytest.raises(ValueError, match="UTF-8 encoded JSON"):
+        FileManager().load_transactions(transactions_file)
+
+
 def test_file_manager_rejects_missing_transaction_fields(tmp_path):
     transactions_file = tmp_path / "transactions.json"
     transactions_file.write_text(json.dumps([

@@ -73,8 +73,13 @@ class FileManager:
             return default
 
         try:
-            with path.open("r", encoding="utf-8") as file:
+            with path.open("r", encoding="utf-8-sig") as file:
                 data = json.load(file)
+        except UnicodeDecodeError as exc:
+            raise ValueError(
+                f"Could not read JSON from {path}: "
+                "the file must be UTF-8 encoded JSON."
+            ) from exc
         except json.JSONDecodeError as exc:
             raise ValueError(
                 f"Could not read JSON from {path}: the file is not valid JSON."
