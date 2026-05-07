@@ -267,15 +267,14 @@ Student Finance Tracker
 8. Save and exit
 ```
 
-### 5.2 Screenshots or Relevant Visuals
+### 5.2 Screenshots & Visuals
 
-Screenshot placeholders:
+<img width="966" height="666" alt="image" src="https://github.com/user-attachments/assets/3f5ecfe2-e856-4cce-b874-c460f749a708" />
+<img width="964" height="666" alt="image" src="https://github.com/user-attachments/assets/65adeb56-c54e-4098-9f02-51375f9e98bb" />
+<img width="964" height="666" alt="image" src="https://github.com/user-attachments/assets/a828c4c6-7108-4113-9e7c-a08a958f22c8" />
 
-- [Insert screenshot: Dashboard tab]
-- [Insert screenshot: Transactions tab showing add/edit/delete]
-- [Insert screenshot: Budgets and Warnings tab]
-- [Insert screenshot: CLI menu]
-- [Insert screenshot: sample data loaded]
+<img width="180" height="173" alt="image" src="https://github.com/user-attachments/assets/c5313e9a-84a9-4b9a-9dbb-9b853e05da9b" />
+<img width="663" height="188" alt="image" src="https://github.com/user-attachments/assets/64238b77-cf01-4e5e-aae9-9cc47ac97295" />
 
 Sample transaction JSON structure:
 
