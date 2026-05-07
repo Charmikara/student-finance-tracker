@@ -61,8 +61,8 @@ class StudentFinanceCLI:
         print("Expense added and saved.")
 
     def _add_budget(self) -> None:
-        category = input("Category: ").strip()
-        limit = float(input("Limit: ").strip())
+        category = self._get_text_input("Category: ")
+        limit = self._get_float_input("Limit: ")
         self.tracker.add_budget(category, limit)
         self.tracker.save()
         print("Budget added and saved.")
@@ -120,13 +120,39 @@ class StudentFinanceCLI:
         for warning in warnings:
             print(warning["message"])
 
-    @staticmethod
-    def _get_transaction_input() -> tuple[float, str, str, str]:
-        amount = float(input("Amount: ").strip())
-        category = input("Category: ").strip()
-        description = input("Description: ").strip()
-        date = input("Date (YYYY-MM-DD): ").strip()
+    def _get_transaction_input(self) -> tuple[float, str, str, str]:
+        amount = self._get_float_input("Amount: ")
+        category = self._get_text_input("Category: ")
+        description = self._get_text_input("Description: ")
+        date = self._get_text_input("Date (YYYY-MM-DD): ")
         return amount, category, description, date
+
+    @staticmethod
+    def _get_float_input(prompt: str) -> float:
+        while True:
+            user_input = input(prompt).strip()
+
+            try:
+                value = float(user_input)
+            except ValueError:
+                print("Please enter a valid number.")
+                continue
+
+            if value <= 0:
+                print("Please enter a number greater than 0.")
+                continue
+
+            return value
+
+    @staticmethod
+    def _get_text_input(prompt: str) -> str:
+        while True:
+            user_input = input(prompt).strip()
+
+            if user_input:
+                return user_input
+
+            print("This field cannot be empty.")
 
 
 if __name__ == "__main__":

@@ -10,5 +10,9 @@
   {
     "category": "entertainment",
     "limit": 100.0
+  },
+  {
+    "category": "subscriptions",
+    "limit": 100.0
   }
 ]
