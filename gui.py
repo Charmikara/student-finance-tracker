@@ -128,6 +128,11 @@ class StudentFinanceGUI:
         self.description_var = tk.StringVar()
         self.date_var = tk.StringVar(value=date.today().isoformat())
 
+        amount_frame = ttk.Frame(form)
+        amount_entry = ttk.Entry(amount_frame, textvariable=self.amount_var)
+        amount_entry.pack(side="left", fill="x", expand=True)
+        ttk.Label(amount_frame, text="EUR").pack(side="left", padx=(6, 0))
+
         fields = [
             ("Type", ttk.Combobox(
                 form,
@@ -135,7 +140,7 @@ class StudentFinanceGUI:
                 values=["income", "expense"],
                 state="readonly",
             )),
-            ("Amount", ttk.Entry(form, textvariable=self.amount_var)),
+            ("Amount", amount_frame),
             ("Category", ttk.Combobox(
                 form,
                 textvariable=self.category_var,
@@ -150,10 +155,8 @@ class StudentFinanceGUI:
             widget.grid(row=1, column=column, sticky="ew", padx=(0, 8), pady=(3, 0))
             form.columnconfigure(column, weight=1)
 
-        ttk.Label(form, text="EUR").grid(row=1, column=5, sticky="w")
-
         buttons = ttk.Frame(form)
-        buttons.grid(row=2, column=0, columnspan=6, sticky="w", pady=(10, 0))
+        buttons.grid(row=2, column=0, columnspan=5, sticky="w", pady=(10, 0))
         ttk.Button(
             buttons,
             text="Add Transaction",
