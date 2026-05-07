@@ -8,6 +8,7 @@ The project is intentionally small and readable for university coursework.
 
 - Add income records
 - Add expense records
+- Edit and delete selected transactions in the GUI
 - Set category budgets
 - View transactions
 - Generate report summaries
@@ -16,6 +17,7 @@ The project is intentionally small and readable for university coursework.
 - Save and load data with JSON
 - Load optional sample data from separate JSON files
 - Create backups before destructive GUI actions
+- Use internal transaction IDs for safer editing and deleting
 
 ## Project Structure
 
@@ -116,6 +118,7 @@ The GUI includes:
 - Dashboard overview
 - Spending-by-category chart
 - Transaction table and form
+- Editing and deleting selected transactions
 - Budget table and form
 - Warnings list
 - Load Sample Data and Reset All Data actions

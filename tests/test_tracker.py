@@ -51,6 +51,7 @@ def test_file_manager_saves_transactions(tmp_path):
     saved_data = json.loads(transactions_file.read_text())
     assert saved_data == [
         {
+            "id": transactions[0].transaction_id,
             "type": "income",
             "amount": 500.0,
             "category": "salary",
@@ -58,6 +59,7 @@ def test_file_manager_saves_transactions(tmp_path):
             "date": "2026-05-07",
         },
         {
+            "id": transactions[1].transaction_id,
             "type": "expense",
             "amount": 25.0,
             "category": "food",
@@ -70,6 +72,8 @@ def test_file_manager_saves_transactions(tmp_path):
     assert len(reloaded_transactions) == 2
     assert reloaded_transactions[0].amount == 500
     assert reloaded_transactions[1].category == "food"
+    assert reloaded_transactions[0].transaction_id == transactions[0].transaction_id
+    assert reloaded_transactions[1].transaction_id == transactions[1].transaction_id
 
 
 def test_file_manager_loads_budgets(tmp_path):
@@ -150,6 +154,59 @@ def test_file_manager_loads_utf8_bom_json(tmp_path):
     assert len(transactions) == 1
     assert transactions[0].get_transaction_type() == "income"
     assert transactions[0].category == "allowance"
+
+
+def test_file_manager_loads_old_transactions_without_ids(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_text(json.dumps([
+        {
+            "type": "expense",
+            "amount": 25,
+            "category": "food",
+            "description": "lunch",
+            "date": "2026-05-07",
+        },
+    ]))
+
+    transactions = FileManager().load_transactions(transactions_file)
+
+    assert len(transactions) == 1
+    assert transactions[0].transaction_id
+    assert transactions[0].category == "food"
+
+
+def test_file_manager_loads_transactions_with_ids(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_text(json.dumps([
+        {
+            "id": "txn-123",
+            "type": "income",
+            "amount": 100,
+            "category": "salary",
+            "description": "job",
+            "date": "2026-05-07",
+        },
+    ]))
+
+    transactions = FileManager().load_transactions(transactions_file)
+
+    assert len(transactions) == 1
+    assert transactions[0].transaction_id == "txn-123"
+
+
+def test_new_transactions_get_ids_and_serialize_them():
+    transaction = Income(100, "salary", "job", "2026-05-07")
+
+    assert transaction.transaction_id
+    assert transaction.id == transaction.transaction_id
+    assert transaction.to_dict()["id"] == transaction.transaction_id
+
+
+def test_transactions_can_be_created_with_existing_ids():
+    transaction = Expense(20, "food", "lunch", "2026-05-07", "existing-id")
+
+    assert transaction.transaction_id == "existing-id"
+    assert transaction.to_dict()["id"] == "existing-id"
 
 
 def test_file_manager_rejects_non_utf8_json_bytes(tmp_path):
@@ -337,6 +394,129 @@ def test_finance_tracker_delete_invalid_transaction_index_raises(tmp_path):
 
     with pytest.raises(IndexError, match="out of range"):
         tracker.delete_transaction_by_index(0)
+
+
+def test_finance_tracker_deletes_transaction_by_id(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_income(100, "allowance", "weekly allowance", "2026-05-07")
+    transaction_id = tracker.transactions[0].transaction_id
+
+    tracker.delete_transaction_by_id(transaction_id)
+
+    assert tracker.transactions == []
+
+
+def test_finance_tracker_update_transaction_keeps_same_id(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_expense(20, "food", "lunch", "2026-05-07")
+    transaction_id = tracker.transactions[0].transaction_id
+
+    tracker.update_transaction(
+        transaction_id,
+        "expense",
+        35,
+        "transport",
+        "bus pass",
+        "2026-05-08",
+    )
+
+    transaction = tracker.get_transaction_by_id(transaction_id)
+    assert transaction.transaction_id == transaction_id
+    assert transaction.amount == 35
+    assert transaction.category == "transport"
+    assert transaction.description == "bus pass"
+    assert transaction.date == "2026-05-08"
+
+
+def test_finance_tracker_update_transaction_changes_income_to_expense(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_income(100, "allowance", "weekly allowance", "2026-05-07")
+    transaction_id = tracker.transactions[0].transaction_id
+
+    tracker.update_transaction(
+        transaction_id,
+        "expense",
+        40,
+        "food",
+        "groceries",
+        "2026-05-08",
+    )
+
+    transaction = tracker.get_transaction_by_id(transaction_id)
+    assert transaction.get_transaction_type() == "expense"
+    assert tracker.get_balance() == -40
+
+
+def test_finance_tracker_update_transaction_changes_expense_to_income(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_expense(50, "food", "groceries", "2026-05-07")
+    transaction_id = tracker.transactions[0].transaction_id
+
+    tracker.update_transaction(
+        transaction_id,
+        "income",
+        200,
+        "salary",
+        "part-time job",
+        "2026-05-08",
+    )
+
+    transaction = tracker.get_transaction_by_id(transaction_id)
+    assert transaction.get_transaction_type() == "income"
+    assert tracker.get_balance() == 200
+
+
+def test_finance_tracker_invalid_transaction_id_raises(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+
+    with pytest.raises(ValueError, match="Transaction not found"):
+        tracker.get_transaction_by_id("missing-id")
+
+    with pytest.raises(ValueError, match="Transaction not found"):
+        tracker.delete_transaction_by_id("missing-id")
+
+    with pytest.raises(ValueError, match="Transaction not found"):
+        tracker.update_transaction(
+            "missing-id",
+            "expense",
+            10,
+            "food",
+            "snack",
+            "2026-05-07",
+        )
+
+
+def test_finance_tracker_invalid_update_type_raises(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_income(100, "allowance", "weekly allowance", "2026-05-07")
+
+    with pytest.raises(ValueError, match="Transaction type"):
+        tracker.update_transaction(
+            tracker.transactions[0].transaction_id,
+            "transfer",
+            10,
+            "savings",
+            "move money",
+            "2026-05-07",
+        )
 
 
 def test_model_validation_rejects_invalid_values():

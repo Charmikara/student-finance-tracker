@@ -36,6 +36,7 @@ class FileManager:
                 item["category"],
                 item["description"],
                 item["date"],
+                item.get("id"),
             ))
 
         return transactions
