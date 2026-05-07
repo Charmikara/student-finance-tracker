@@ -66,6 +66,22 @@ class FinanceTracker:
         self._transactions = []
         self._budgets = {}
 
+    def delete_transaction_by_index(self, index: int) -> None:
+        if not isinstance(index, int):
+            raise TypeError("Transaction index must be an integer.")
+
+        if index < 0 or index >= len(self._transactions):
+            raise IndexError("Transaction index is out of range.")
+
+        del self._transactions[index]
+
+    def delete_budget(self, category: str) -> None:
+        normalized_category = normalize_category(category)
+        if normalized_category not in self._budgets:
+            raise KeyError(f"Budget not found for category: {normalized_category}")
+
+        del self._budgets[normalized_category]
+
     def get_total_income(self) -> float:
         return sum(
             transaction.amount

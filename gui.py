@@ -16,13 +16,21 @@ class StudentFinanceGUI:
         self.tracker = FinanceTracker()
 
         self.metric_labels = {}
+        self.status_var = tk.StringVar(value="Ready")
 
         self._build_layout()
         self.refresh()
 
     def _build_layout(self) -> None:
+        toolbar = ttk.Frame(self.root, padding=(10, 8))
+        toolbar.pack(fill="x")
+
+        ttk.Button(toolbar, text="Refresh", command=self.refresh).pack(side="left", padx=4)
+        ttk.Button(toolbar, text="Load Sample Data", command=self.load_sample_data).pack(side="left", padx=4)
+        ttk.Button(toolbar, text="Clear All Data", command=self.clear_all_data).pack(side="left", padx=4)
+
         notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        notebook.pack(fill="both", expand=True, padx=10, pady=(0, 6))
 
         self.dashboard_tab = ttk.Frame(notebook, padding=10)
         self.transactions_tab = ttk.Frame(notebook, padding=10)
@@ -35,6 +43,15 @@ class StudentFinanceGUI:
         self._build_dashboard_tab()
         self._build_transactions_tab()
         self._build_budgets_tab()
+
+        status_bar = ttk.Label(
+            self.root,
+            textvariable=self.status_var,
+            anchor="w",
+            padding=(10, 5),
+            relief="sunken",
+        )
+        status_bar.pack(fill="x")
 
     def _build_dashboard_tab(self) -> None:
         overview = ttk.LabelFrame(self.dashboard_tab, text="Overview", padding=10)
@@ -89,10 +106,7 @@ class StudentFinanceGUI:
 
         ttk.Button(buttons, text="Add Income", command=self.add_income).pack(side="left", padx=4)
         ttk.Button(buttons, text="Add Expense", command=self.add_expense).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Add Budget", command=self.add_budget).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Refresh", command=self.refresh).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Load Sample Data", command=self.load_sample_data).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Clear All Data", command=self.clear_all_data).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Delete Selected Transaction", command=self.delete_selected_transaction).pack(side="left", padx=4)
 
         table_frame = ttk.LabelFrame(
             self.transactions_tab,
@@ -125,6 +139,8 @@ class StudentFinanceGUI:
         for column in columns:
             self.transactions_tree.heading(column, text=headings[column])
             self.transactions_tree.column(column, width=widths[column], anchor="w")
+        self.transactions_tree.tag_configure("income", background="#edf7ed")
+        self.transactions_tree.tag_configure("expense", background="#fff1f1")
 
         scrollbar = ttk.Scrollbar(
             table_frame,
@@ -136,6 +152,20 @@ class StudentFinanceGUI:
         scrollbar.pack(side="right", fill="y")
 
     def _build_budgets_tab(self) -> None:
+        form = ttk.LabelFrame(self.budgets_tab, text="Add Budget", padding=10)
+        form.pack(fill="x", pady=(0, 10))
+
+        self.budget_category_entry = ttk.Entry(form)
+        self.budget_limit_entry = ttk.Entry(form)
+
+        self._add_labeled_entry(form, "Category", self.budget_category_entry, 0)
+        self._add_labeled_entry(form, "Limit", self.budget_limit_entry, 1)
+
+        budget_buttons = ttk.Frame(form)
+        budget_buttons.grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        ttk.Button(budget_buttons, text="Add Budget", command=self.add_budget).pack(side="left", padx=4)
+        ttk.Button(budget_buttons, text="Delete Selected Budget", command=self.delete_selected_budget).pack(side="left", padx=4)
+
         budget_frame = ttk.LabelFrame(
             self.budgets_tab,
             text="Budget Status",
@@ -160,6 +190,7 @@ class StudentFinanceGUI:
         for column in columns:
             self.budget_tree.heading(column, text=headings[column])
             self.budget_tree.column(column, width=140, anchor="w")
+        self.budget_tree.tag_configure("exceeded", background="#fff1f1")
 
         self.budget_tree.pack(fill="both", expand=True)
 
@@ -186,7 +217,7 @@ class StudentFinanceGUI:
             self.tracker.save()
             self._clear_inputs()
             self.refresh()
-            messagebox.showinfo("Saved", "Income added and saved.")
+            self._set_status("Income added and saved.")
         except (TypeError, ValueError) as error:
             messagebox.showerror("Invalid input", str(error))
 
@@ -197,19 +228,19 @@ class StudentFinanceGUI:
             self.tracker.save()
             self._clear_inputs()
             self.refresh()
-            messagebox.showinfo("Saved", "Expense added and saved.")
+            self._set_status("Expense added and saved.")
         except (TypeError, ValueError) as error:
             messagebox.showerror("Invalid input", str(error))
 
     def add_budget(self) -> None:
         try:
-            category = self._get_text(self.category_entry, "Category")
-            limit = self._get_amount()
+            category = self._get_text(self.budget_category_entry, "Budget category")
+            limit = self._get_positive_number(self.budget_limit_entry, "Budget limit")
             self.tracker.add_budget(category, limit)
             self.tracker.save()
-            self._clear_inputs()
+            self._clear_budget_inputs()
             self.refresh()
-            messagebox.showinfo("Saved", "Budget added and saved.")
+            self._set_status("Budget added and saved.")
         except (TypeError, ValueError) as error:
             messagebox.showerror("Invalid input", str(error))
 
@@ -231,7 +262,7 @@ class StudentFinanceGUI:
             self.tracker.load_sample_data()
             self.tracker.save()
             self.refresh()
-            messagebox.showinfo("Sample Data Loaded", "Sample data loaded and saved.")
+            self._set_status("Sample data loaded.")
         except (TypeError, ValueError) as error:
             messagebox.showerror("Could not load sample data", str(error))
 
@@ -246,7 +277,37 @@ class StudentFinanceGUI:
         self.tracker.clear_data()
         self.tracker.save()
         self.refresh()
-        messagebox.showinfo("Data Cleared", "All data cleared and saved.")
+        self._set_status("All data cleared.")
+
+    def delete_selected_transaction(self) -> None:
+        selected = self.transactions_tree.selection()
+        if not selected:
+            messagebox.showerror("No selection", "Please select a transaction to delete.")
+            return
+
+        index = int(selected[0])
+        try:
+            self.tracker.delete_transaction_by_index(index)
+            self.tracker.save()
+            self.refresh()
+            self._set_status("Transaction deleted and saved.")
+        except (IndexError, TypeError, ValueError) as error:
+            messagebox.showerror("Could not delete transaction", str(error))
+
+    def delete_selected_budget(self) -> None:
+        selected = self.budget_tree.selection()
+        if not selected:
+            messagebox.showerror("No selection", "Please select a budget to delete.")
+            return
+
+        category = selected[0]
+        try:
+            self.tracker.delete_budget(category)
+            self.tracker.save()
+            self.refresh()
+            self._set_status("Budget deleted and saved.")
+        except (KeyError, TypeError, ValueError) as error:
+            messagebox.showerror("Could not delete budget", str(error))
 
     def _show_dashboard(self) -> None:
         report = ReportGenerator().generate_report(self.tracker.transactions)
@@ -279,6 +340,7 @@ class StudentFinanceGUI:
             canvas.create_text(20, 20, anchor="w", text="No expenses found.")
             return
 
+        total_expenses = sum(category_spending.values())
         max_amount = max(category_spending.values())
         left_margin = 150
         bar_height = 24
@@ -301,22 +363,25 @@ class StudentFinanceGUI:
                 left_margin + width + 8,
                 y + 12,
                 anchor="w",
-                text=f"{amount:.2f}",
+                text=f"{amount:.2f} ({(amount / total_expenses) * 100:.1f}%)",
             )
 
     def _show_transactions(self) -> None:
         self.transactions_tree.delete(*self.transactions_tree.get_children())
-        for transaction in self.tracker.transactions:
+        for index, transaction in enumerate(self.tracker.transactions):
+            transaction_type = transaction.get_transaction_type()
             self.transactions_tree.insert(
                 "",
                 tk.END,
+                iid=str(index),
                 values=(
-                    transaction.get_transaction_type(),
+                    transaction_type,
                     f"{transaction.amount:.2f}",
                     transaction.category,
                     transaction.description,
                     transaction.date,
                 ),
+                tags=(transaction_type,),
             )
 
     def _show_budget_status(self) -> None:
@@ -326,6 +391,7 @@ class StudentFinanceGUI:
             self.budget_tree.insert(
                 "",
                 tk.END,
+                iid=category,
                 values=(
                     category,
                     f"{details['spent']:.2f}",
@@ -333,6 +399,7 @@ class StudentFinanceGUI:
                     f"{details['remaining']:.2f}",
                     status,
                 ),
+                tags=("exceeded",) if details["exceeded"] else (),
             )
 
     def _show_warnings(self) -> None:
@@ -373,13 +440,16 @@ class StudentFinanceGUI:
         return date_text
 
     def _get_amount(self) -> float:
-        value = self._get_text(self.amount_entry, "Amount")
+        return self._get_positive_number(self.amount_entry, "Amount")
+
+    def _get_positive_number(self, entry: ttk.Entry, field_name: str) -> float:
+        value = self._get_text(entry, field_name)
         try:
             amount = float(value)
         except ValueError as exc:
-            raise ValueError("Amount must be a valid number.") from exc
+            raise ValueError(f"{field_name} must be a valid number.") from exc
         if amount <= 0:
-            raise ValueError("Amount must be greater than 0.")
+            raise ValueError(f"{field_name} must be greater than 0.")
         return amount
 
     @staticmethod
@@ -397,6 +467,13 @@ class StudentFinanceGUI:
             self.date_entry,
         ):
             entry.delete(0, tk.END)
+
+    def _clear_budget_inputs(self) -> None:
+        self.budget_category_entry.delete(0, tk.END)
+        self.budget_limit_entry.delete(0, tk.END)
+
+    def _set_status(self, message: str) -> None:
+        self.status_var.set(message)
 
 
 def main() -> None:

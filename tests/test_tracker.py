@@ -264,6 +264,23 @@ def test_finance_tracker_clears_data_and_saves_empty_files(tmp_path):
     assert json.loads(budgets_file.read_text()) == []
 
 
+def test_finance_tracker_deletes_transaction_and_budget(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+    tracker.add_income(500, "salary", "part-time job", "2026-05-07")
+    tracker.add_expense(50, "food", "groceries", "2026-05-07")
+    tracker.add_budget("food", 200)
+
+    tracker.delete_transaction_by_index(0)
+    tracker.delete_budget(" Food ")
+
+    assert len(tracker.transactions) == 1
+    assert tracker.transactions[0].get_transaction_type() == "expense"
+    assert tracker.budgets == {}
+
+
 def test_report_generator_calculates_summary_and_categories():
     transactions = [
         Income(1000, "salary", "monthly salary", "2026-05-07"),
