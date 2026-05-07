@@ -102,6 +102,46 @@ class FinanceTracker:
 
         del self._transactions[index]
 
+    def get_transaction_by_id(self, transaction_id: str) -> Transaction:
+        for transaction in self._transactions:
+            if transaction.transaction_id == transaction_id:
+                return transaction
+
+        raise ValueError(f"Transaction not found for ID: {transaction_id}")
+
+    def update_transaction(
+        self,
+        transaction_id: str,
+        transaction_type: str,
+        amount: float,
+        category: str,
+        description: str,
+        date: str,
+    ) -> None:
+        transaction_class = self._transaction_class_for(transaction_type)
+        updated_transaction = transaction_class(
+            amount,
+            category,
+            description,
+            date,
+            transaction_id,
+        )
+
+        for index, transaction in enumerate(self._transactions):
+            if transaction.transaction_id == transaction_id:
+                self._transactions[index] = updated_transaction
+                return
+
+        raise ValueError(f"Transaction not found for ID: {transaction_id}")
+
+    def delete_transaction_by_id(self, transaction_id: str) -> None:
+        for index, transaction in enumerate(self._transactions):
+            if transaction.transaction_id == transaction_id:
+                del self._transactions[index]
+                return
+
+        raise ValueError(f"Transaction not found for ID: {transaction_id}")
+
     def delete_budget(self, category: str) -> None:
         normalized_category = normalize_category(category)
         if normalized_category not in self._budgets:
@@ -144,3 +184,12 @@ class FinanceTracker:
 
     def _generate_report(self) -> dict[str, float | dict[str, float]]:
         return ReportGenerator().generate_report(self._transactions)
+
+    @staticmethod
+    def _transaction_class_for(transaction_type: str):
+        if transaction_type == "income":
+            return Income
+        if transaction_type == "expense":
+            return Expense
+
+        raise ValueError("Transaction type must be 'income' or 'expense'.")

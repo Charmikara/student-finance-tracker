@@ -29,6 +29,7 @@ class StudentFinanceGUI:
 
         self.tracker = FinanceTracker()
         self.status_text = tk.StringVar(value="Ready")
+        self.editing_transaction_id: str | None = None
 
         self._build_toolbar()
         self._build_tabs()
@@ -157,16 +158,29 @@ class StudentFinanceGUI:
 
         buttons = ttk.Frame(form)
         buttons.grid(row=2, column=0, columnspan=5, sticky="w", pady=(10, 0))
-        ttk.Button(
+        self.submit_transaction_button = ttk.Button(
             buttons,
             text="Add Transaction",
             command=self._add_transaction,
-        ).pack(side="left")
+        )
+        self.submit_transaction_button.pack(side="left")
+        ttk.Button(
+            buttons,
+            text="Edit Selected Transaction",
+            command=self._edit_selected_transaction,
+        ).pack(side="left", padx=(8, 0))
         ttk.Button(
             buttons,
             text="Delete Selected Transaction",
             command=self._delete_selected_transaction,
         ).pack(side="left", padx=(8, 0))
+        self.cancel_edit_button = ttk.Button(
+            buttons,
+            text="Cancel Edit",
+            command=self._cancel_edit,
+            state="disabled",
+        )
+        self.cancel_edit_button.pack(side="left", padx=(8, 0))
 
         table_frame = ttk.LabelFrame(
             self.transactions_tab,
@@ -320,12 +334,12 @@ class StudentFinanceGUI:
     def _refresh_transactions(self) -> None:
         self.transactions_tree.delete(*self.transactions_tree.get_children())
 
-        for index, transaction in enumerate(self.tracker.transactions):
+        for transaction in self.tracker.transactions:
             transaction_type = transaction.get_transaction_type()
             self.transactions_tree.insert(
                 "",
                 "end",
-                iid=str(index),
+                iid=transaction.transaction_id,
                 values=(
                     transaction_type,
                     f"{transaction.amount:.2f}",
@@ -379,7 +393,19 @@ class StudentFinanceGUI:
             )
             transaction_date = self._get_valid_date(self.date_var.get())
 
-            if self.transaction_type_var.get() == "income":
+            transaction_type = self.transaction_type_var.get()
+
+            if self.editing_transaction_id:
+                self.tracker.update_transaction(
+                    self.editing_transaction_id,
+                    transaction_type,
+                    amount,
+                    category,
+                    description,
+                    transaction_date,
+                )
+                message = "Transaction updated and saved."
+            elif transaction_type == "income":
                 self.tracker.add_income(amount, category, description, transaction_date)
                 message = "Income added and saved."
             else:
@@ -387,7 +413,7 @@ class StudentFinanceGUI:
                 message = "Expense added and saved."
 
             self.tracker.save()
-            self._clear_transaction_form()
+            self._reset_transaction_form()
             self.refresh()
             self._set_status(message)
         except (TypeError, ValueError) as error:
@@ -411,13 +437,37 @@ class StudentFinanceGUI:
 
     def _delete_selected_transaction(self) -> None:
         try:
-            index = self._selected_transaction_index()
-            self.tracker.delete_transaction_by_index(index)
+            transaction_id = self._selected_transaction_id()
+            self.tracker.delete_transaction_by_id(transaction_id)
             self.tracker.save()
+            if self.editing_transaction_id == transaction_id:
+                self._reset_transaction_form()
             self.refresh()
             self._set_status("Transaction deleted and saved.")
-        except (IndexError, TypeError, ValueError) as error:
+        except ValueError as error:
             messagebox.showerror("Delete transaction", str(error))
+
+    def _edit_selected_transaction(self) -> None:
+        try:
+            transaction_id = self._selected_transaction_id()
+            transaction = self.tracker.get_transaction_by_id(transaction_id)
+        except ValueError as error:
+            messagebox.showerror("Edit transaction", str(error))
+            return
+
+        self.editing_transaction_id = transaction.transaction_id
+        self.transaction_type_var.set(transaction.get_transaction_type())
+        self.amount_var.set(f"{transaction.amount:.2f}")
+        self.category_var.set(transaction.category)
+        self.description_var.set(transaction.description)
+        self.date_var.set(transaction.date)
+        self.submit_transaction_button.configure(text="Save Changes")
+        self.cancel_edit_button.configure(state="normal")
+        self._set_status("Editing selected transaction.")
+
+    def _cancel_edit(self) -> None:
+        self._reset_transaction_form()
+        self._set_status("Edit cancelled.")
 
     def _delete_selected_budget(self) -> None:
         selection = self.budget_tree.selection()
@@ -475,17 +525,24 @@ class StudentFinanceGUI:
         except OSError as error:
             messagebox.showerror("Reset all data", str(error))
 
-    def _selected_transaction_index(self) -> int:
+    def _selected_transaction_id(self) -> str:
         selection = self.transactions_tree.selection()
         if not selection:
-            raise ValueError("Please select a transaction to delete.")
-        return int(selection[0])
+            raise ValueError("Please select a transaction.")
+        return selection[0]
 
     def _clear_transaction_form(self) -> None:
         self.amount_var.set("")
         self.category_var.set("")
         self.description_var.set("")
         self.date_var.set(date.today().isoformat())
+
+    def _reset_transaction_form(self) -> None:
+        self.editing_transaction_id = None
+        self.transaction_type_var.set("expense")
+        self._clear_transaction_form()
+        self.submit_transaction_button.configure(text="Add Transaction")
+        self.cancel_edit_button.configure(state="disabled")
 
     def _set_status(self, message: str) -> None:
         self.status_text.set(message)
