@@ -3,7 +3,7 @@
 **Authors:** Charmikara, Pratham  
 **Course:** Object-Oriented Programming  
 **Repository:** https://github.com/Charmikara/student-finance-tracker  
-**Date:** May 2026
+**Date:** May 8th 2026
 
 ---
 
