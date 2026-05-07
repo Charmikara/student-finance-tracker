@@ -14,6 +14,7 @@ This project is designed to be simple, readable, and suitable for university cou
 - View budget status by category
 - Receive warnings for exceeded budgets, low balance, and unusual spending
 - Save and load transactions and budgets with JSON
+- Load separate sample data from the GUI when needed
 
 ## Project Structure
 
@@ -37,6 +38,8 @@ Contains the interactive command-line menu. It creates a `FinanceTracker` object
 ### `gui.py`
 
 Contains a simple Tkinter interface for the same tracker. It lets the user add income, expenses, and budgets, then refreshes transactions, reports, budget status, and warnings.
+
+The GUI can also load sample data or clear all current data using confirmation dialogs.
 
 ### `models/`
 
@@ -65,8 +68,10 @@ Stores sample and saved application data:
 
 - `transactions.json`
 - `budgets.json`
+- `sample_transactions.json`
+- `sample_budgets.json`
 
-The application loads sample data from these files when it starts and saves changes back to them.
+The application starts with real user data from `transactions.json` and `budgets.json`. These default files are empty in the repository. Demo records are stored separately in `sample_transactions.json` and `sample_budgets.json`.
 
 ### `tests/`
 
@@ -117,6 +122,8 @@ Run the optional Tkinter GUI:
 python gui.py
 ```
 
+The GUI starts with the real data files. Use `Load Sample Data` to replace the current data with demo records from the separate sample JSON files.
+
 ## Sample Usage
 
 When the application runs, it shows this menu:
@@ -154,7 +161,9 @@ The tests use temporary files where needed, so they do not depend on or overwrit
 
 ## Notes
 
-- Sample transactions are stored in `data/transactions.json`.
-- Sample budgets are stored in `data/budgets.json`.
+- Real transactions are stored in `data/transactions.json`.
+- Real budgets are stored in `data/budgets.json`.
+- Sample transactions are stored in `data/sample_transactions.json`.
+- Sample budgets are stored in `data/sample_budgets.json`.
 - The project uses JSON storage only.
 - The code is intentionally kept simple to demonstrate core OOP concepts.

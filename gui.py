@@ -14,6 +14,7 @@ class StudentFinanceGUI:
         self.tracker = FinanceTracker()
 
         self._build_form()
+        self.overview_text = self._create_text_area("Overview", 8)
         self.transactions_text = self._create_text_area("Transactions", 7)
         self.report_text = self._create_text_area("Report", 6)
         self.budget_text = self._create_text_area("Budget Status", 6)
@@ -42,6 +43,8 @@ class StudentFinanceGUI:
         tk.Button(buttons, text="Add Expense", command=self.add_expense).pack(side="left", padx=4)
         tk.Button(buttons, text="Add Budget", command=self.add_budget).pack(side="left", padx=4)
         tk.Button(buttons, text="Refresh", command=self.refresh).pack(side="left", padx=4)
+        tk.Button(buttons, text="Load Sample Data", command=self.load_sample_data).pack(side="left", padx=4)
+        tk.Button(buttons, text="Clear All Data", command=self.clear_all_data).pack(side="left", padx=4)
 
     @staticmethod
     def _add_labeled_entry(parent: tk.Frame, label: str, entry: tk.Entry, row: int) -> None:
@@ -93,10 +96,71 @@ class StudentFinanceGUI:
             messagebox.showerror("Invalid input", str(error))
 
     def refresh(self) -> None:
+        self._show_overview()
         self._show_transactions()
         self._show_report()
         self._show_budget_status()
         self._show_warnings()
+
+    def load_sample_data(self) -> None:
+        confirmed = messagebox.askyesno(
+            "Load Sample Data",
+            "This will replace current transactions and budgets with sample data. Continue?",
+        )
+        if not confirmed:
+            return
+
+        try:
+            self.tracker.load_sample_data()
+            self.tracker.save()
+            self.refresh()
+            messagebox.showinfo("Sample Data Loaded", "Sample data loaded and saved.")
+        except (TypeError, ValueError) as error:
+            messagebox.showerror("Could not load sample data", str(error))
+
+    def clear_all_data(self) -> None:
+        confirmed = messagebox.askyesno(
+            "Clear All Data",
+            "This will delete all current transactions and budgets. Continue?",
+        )
+        if not confirmed:
+            return
+
+        self.tracker.clear_data()
+        self.tracker.save()
+        self.refresh()
+        messagebox.showinfo("Data Cleared", "All data cleared and saved.")
+
+    def _show_overview(self) -> None:
+        report = ReportGenerator().generate_report(self.tracker.transactions)
+        budget_status = self.tracker.get_budget_status()
+        exceeded_count = sum(
+            1 for details in budget_status.values()
+            if details["exceeded"]
+        )
+        top_category = self._get_top_spending_category(report["category_spending"])
+
+        lines = [
+            f"Total income: {report['total_income']:.2f}",
+            f"Total expenses: {report['total_expense']:.2f}",
+            f"Balance: {report['balance']:.2f}",
+            f"Transactions: {len(self.tracker.transactions)}",
+            f"Budgets: {len(self.tracker.budgets)}",
+            f"Exceeded budgets: {exceeded_count}",
+            f"Top spending category: {top_category or 'None'}",
+            "",
+            "Spending by category:",
+        ]
+
+        if report["category_spending"]:
+            max_amount = max(report["category_spending"].values())
+            for category, amount in report["category_spending"].items():
+                bar = self._make_bar(amount, max_amount)
+                lines.append(f"{category:15} {bar} {amount:.2f}")
+        else:
+            lines.append("No expenses found.")
+
+        self._set_text(self.overview_text, "\n".join(lines))
 
     def _show_transactions(self) -> None:
         lines = [str(transaction) for transaction in self.tracker.transactions]
@@ -145,6 +209,22 @@ class StudentFinanceGUI:
         )
         lines = [warning["message"] for warning in warnings]
         self._set_text(self.warnings_text, "\n".join(lines) or "No warnings.")
+
+    @staticmethod
+    def _get_top_spending_category(category_spending: dict) -> str | None:
+        if not category_spending:
+            return None
+
+        category, amount = max(category_spending.items(), key=lambda item: item[1])
+        return f"{category} ({amount:.2f})"
+
+    @staticmethod
+    def _make_bar(amount: float, max_amount: float) -> str:
+        if max_amount <= 0:
+            return ""
+
+        bar_length = max(1, round((amount / max_amount) * 20))
+        return "#" * bar_length
 
     def _get_transaction_input(self) -> tuple[float, str, str, str]:
         amount = self._get_amount()

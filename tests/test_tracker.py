@@ -196,6 +196,74 @@ def test_finance_tracker_loads_from_json_files(tmp_path):
     assert tracker.budgets["food"].limit == 200
 
 
+def test_finance_tracker_loads_sample_data_and_saves_to_active_files(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    budgets_file = tmp_path / "budgets.json"
+    sample_transactions_file = tmp_path / "sample_transactions.json"
+    sample_budgets_file = tmp_path / "sample_budgets.json"
+
+    transactions_file.write_text("[]")
+    budgets_file.write_text("[]")
+    sample_transactions_file.write_text(json.dumps([
+        {
+            "type": "income",
+            "amount": 500,
+            "category": "salary",
+            "description": "part-time job",
+            "date": "2026-05-07",
+        },
+        {
+            "type": "expense",
+            "amount": 50,
+            "category": "food",
+            "description": "groceries",
+            "date": "2026-05-07",
+        },
+    ]))
+    sample_budgets_file.write_text(json.dumps([
+        {"category": "food", "limit": 200},
+    ]))
+
+    tracker = FinanceTracker(
+        transactions_file,
+        budgets_file,
+        sample_transactions_file,
+        sample_budgets_file,
+    )
+
+    tracker.load_sample_data()
+    tracker.save()
+    reloaded = FinanceTracker(transactions_file, budgets_file)
+
+    assert len(reloaded.transactions) == 2
+    assert reloaded.get_balance() == 450
+    assert reloaded.budgets["food"].limit == 200
+
+
+def test_finance_tracker_clears_data_and_saves_empty_files(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    budgets_file = tmp_path / "budgets.json"
+    transactions_file.write_text(json.dumps([
+        {
+            "type": "income",
+            "amount": 500,
+            "category": "salary",
+            "description": "part-time job",
+            "date": "2026-05-07",
+        },
+    ]))
+    budgets_file.write_text(json.dumps([
+        {"category": "food", "limit": 200},
+    ]))
+
+    tracker = FinanceTracker(transactions_file, budgets_file)
+    tracker.clear_data()
+    tracker.save()
+
+    assert json.loads(transactions_file.read_text()) == []
+    assert json.loads(budgets_file.read_text()) == []
+
+
 def test_report_generator_calculates_summary_and_categories():
     transactions = [
         Income(1000, "salary", "monthly salary", "2026-05-07"),

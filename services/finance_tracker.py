@@ -15,10 +15,14 @@ class FinanceTracker:
         self,
         transactions_file: str = "data/transactions.json",
         budgets_file: str = "data/budgets.json",
+        sample_transactions_file: str = "data/sample_transactions.json",
+        sample_budgets_file: str = "data/sample_budgets.json",
         file_manager: FileManager | None = None,
     ) -> None:
         self._transactions_file = transactions_file
         self._budgets_file = budgets_file
+        self._sample_transactions_file = sample_transactions_file
+        self._sample_budgets_file = sample_budgets_file
         self._file_manager = file_manager or FileManager()
         self._transactions = []
         self._budgets = {}
@@ -51,6 +55,16 @@ class FinanceTracker:
     def save(self) -> None:
         self._file_manager.save_transactions(self._transactions, self._transactions_file)
         self._file_manager.save_budgets(self._budgets, self._budgets_file)
+
+    def load_sample_data(self) -> None:
+        self._transactions = self._file_manager.load_transactions(
+            self._sample_transactions_file
+        )
+        self._budgets = self._file_manager.load_budgets(self._sample_budgets_file)
+
+    def clear_data(self) -> None:
+        self._transactions = []
+        self._budgets = {}
 
     def get_total_income(self) -> float:
         return sum(
