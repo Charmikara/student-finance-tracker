@@ -436,36 +436,42 @@ class StudentFinanceGUI:
     def _load_sample_data(self) -> None:
         confirmed = messagebox.askyesno(
             "Load sample data",
-            "This will create a backup, then replace current transactions and "
-            "budgets with sample data. Continue?",
+            "This will replace current transactions and budgets with sample data. "
+            "If existing data is found, a backup will be created first. Continue?",
         )
         if not confirmed:
             return
 
         try:
-            self.tracker.backup_current_data()
+            backups = self.tracker.backup_current_data()
             self.tracker.load_sample_data()
             self.tracker.save()
             self.refresh()
-            self._set_status("Backup checked. Sample data loaded.")
+            if backups:
+                self._set_status("Backup created. Sample data loaded.")
+            else:
+                self._set_status("No existing data found. Sample data loaded.")
         except (OSError, ValueError) as error:
             messagebox.showerror("Load sample data", str(error))
 
     def _reset_all_data(self) -> None:
         confirmed = messagebox.askyesno(
             "Reset all data",
-            "This will create a backup, then delete all current transactions and "
-            "budgets. Continue?",
+            "This will delete all current transactions and budgets. "
+            "If existing data is found, a backup will be created first. Continue?",
         )
         if not confirmed:
             return
 
         try:
-            self.tracker.backup_current_data()
+            backups = self.tracker.backup_current_data()
             self.tracker.clear_data()
             self.tracker.save()
             self.refresh()
-            self._set_status("Backup checked. All data reset.")
+            if backups:
+                self._set_status("Backup created. All data reset.")
+            else:
+                self._set_status("No existing data found. All data reset.")
         except OSError as error:
             messagebox.showerror("Reset all data", str(error))
 
