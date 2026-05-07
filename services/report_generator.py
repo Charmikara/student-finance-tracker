@@ -1,3 +1,6 @@
+from utils.validators import normalize_category
+
+
 class ReportGenerator:
     def generate_report(self, transactions):
         total_income, total_expense = self._calculate_totals(transactions)
@@ -29,9 +32,10 @@ class ReportGenerator:
 
         for txn in transactions:
             if txn.get_transaction_type() == "expense":
-                if txn.category not in category_spending:
-                    category_spending[txn.category] = 0
+                category = normalize_category(txn.category)
+                if category not in category_spending:
+                    category_spending[category] = 0
 
-                category_spending[txn.category] += txn.amount
+                category_spending[category] += txn.amount
 
         return category_spending

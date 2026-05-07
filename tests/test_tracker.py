@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from models.budget import Budget
 from models.expense import Expense
 from models.income import Income
@@ -95,6 +97,74 @@ def test_file_manager_saves_budgets(tmp_path):
     ]
 
 
+def test_file_manager_handles_empty_files(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    budgets_file = tmp_path / "budgets.json"
+    transactions_file.write_text("")
+    budgets_file.write_text("")
+
+    file_manager = FileManager()
+
+    assert file_manager.load_transactions(transactions_file) == []
+    assert file_manager.load_budgets(budgets_file) == {}
+
+
+def test_file_manager_handles_missing_files(tmp_path):
+    file_manager = FileManager()
+
+    assert file_manager.load_transactions(tmp_path / "missing_transactions.json") == []
+    assert file_manager.load_budgets(tmp_path / "missing_budgets.json") == {}
+
+
+def test_file_manager_rejects_malformed_json(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_text("{bad json")
+
+    with pytest.raises(ValueError, match="not valid JSON"):
+        FileManager().load_transactions(transactions_file)
+
+
+def test_file_manager_rejects_missing_transaction_fields(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_text(json.dumps([
+        {
+            "type": "expense",
+            "amount": 20,
+            "category": "food",
+            "date": "2026-05-07",
+        },
+    ]))
+
+    with pytest.raises(ValueError, match="missing required field"):
+        FileManager().load_transactions(transactions_file)
+
+
+def test_file_manager_rejects_missing_budget_fields(tmp_path):
+    budgets_file = tmp_path / "budgets.json"
+    budgets_file.write_text(json.dumps([
+        {"category": "food"},
+    ]))
+
+    with pytest.raises(ValueError, match="missing required field"):
+        FileManager().load_budgets(budgets_file)
+
+
+def test_file_manager_rejects_unknown_transaction_type(tmp_path):
+    transactions_file = tmp_path / "transactions.json"
+    transactions_file.write_text(json.dumps([
+        {
+            "type": "transfer",
+            "amount": 50,
+            "category": "savings",
+            "description": "move money",
+            "date": "2026-05-07",
+        },
+    ]))
+
+    with pytest.raises(ValueError, match="Unknown transaction type"):
+        FileManager().load_transactions(transactions_file)
+
+
 def test_finance_tracker_loads_from_json_files(tmp_path):
     transactions_file = tmp_path / "transactions.json"
     budgets_file = tmp_path / "budgets.json"
@@ -143,6 +213,25 @@ def test_report_generator_calculates_summary_and_categories():
         "food": 150,
         "transport": 25,
     }
+
+
+def test_category_normalization_for_reports_and_budget_status(tmp_path):
+    tracker = FinanceTracker(
+        tmp_path / "transactions.json",
+        tmp_path / "budgets.json",
+    )
+
+    tracker.add_expense(40, " Food ", "groceries", "2026-05-07")
+    tracker.add_expense(60, "FOOD", "lunch", "2026-05-08")
+    tracker.add_budget(" food ", 90)
+
+    report = ReportGenerator().generate_report(tracker.transactions)
+    budget_status = tracker.get_budget_status()
+
+    assert report["category_spending"] == {"food": 100}
+    assert budget_status["food"]["spent"] == 100
+    assert budget_status["food"]["limit"] == 90
+    assert budget_status["food"]["exceeded"] is True
 
 
 def test_warning_system_detects_food_budget_exceeded():
@@ -223,3 +312,36 @@ def test_warning_system_keeps_unusual_spending_with_budget_warning():
     warning_types = [warning["type"] for warning in warnings]
     assert "BUDGET_EXCEEDED" in warning_types
     assert "UNUSUAL_SPENDING" in warning_types
+
+
+def test_warning_system_uses_latest_expense_by_date_for_unusual_spending():
+    transactions = [
+        Expense(300, "food", "old large shop", "2026-05-01"),
+        Expense(50, "food", "groceries", "2026-05-02"),
+        Expense(60, "food", "new groceries", "2026-05-03"),
+    ]
+
+    warnings = WarningSystem().analyze(transactions, {}, current_balance=500)
+
+    assert [
+        warning for warning in warnings
+        if warning["type"] == "UNUSUAL_SPENDING"
+    ] == []
+
+
+def test_warning_system_compares_latest_against_previous_average():
+    transactions = [
+        Expense(50, "food", "groceries", "2026-05-01"),
+        Expense(60, "food", "lunch", "2026-05-02"),
+        Expense(200, "food", "large shop", "2026-05-03"),
+    ]
+
+    warnings = WarningSystem().analyze(transactions, {}, current_balance=500)
+    unusual_warnings = [
+        warning for warning in warnings
+        if warning["type"] == "UNUSUAL_SPENDING"
+    ]
+
+    assert len(unusual_warnings) == 1
+    assert unusual_warnings[0]["amount"] == 200
+    assert unusual_warnings[0]["average"] == 55

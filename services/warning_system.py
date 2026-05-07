@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from utils.validators import normalize_category
+
 
 class WarningSystem:
     def __init__(self, low_balance_threshold=100):
@@ -20,11 +22,11 @@ class WarningSystem:
 
         for txn in transactions:
             if txn.get_transaction_type() == "expense":
-                category = self._normalize_category(txn.category)
+                category = normalize_category(txn.category)
                 category_spending[category] += txn.amount
 
         for category, budget_limit in budget_limits.items():
-            normalized_category = self._normalize_category(category)
+            normalized_category = normalize_category(category)
             limit = getattr(budget_limit, "limit", budget_limit)
             spent = category_spending.get(normalized_category, 0)
 
@@ -61,27 +63,28 @@ class WarningSystem:
 
         for txn in transactions:
             if txn.get_transaction_type() == "expense":
-                category = self._normalize_category(txn.category)
-                category_spending[category].append(txn.amount)
+                category = normalize_category(txn.category)
+                category_spending[category].append(txn)
 
-        for category, amounts in category_spending.items():
-            if len(amounts) < 3:
+        for category, expenses in category_spending.items():
+            if len(expenses) < 3:
                 continue
 
-            avg = sum(amounts) / len(amounts)
-            last = amounts[-1]
+            sorted_expenses = sorted(expenses, key=lambda transaction: transaction.date)
+            latest_expense = sorted_expenses[-1]
+            previous_expenses = sorted_expenses[:-1]
+            previous_average = (
+                sum(transaction.amount for transaction in previous_expenses)
+                / len(previous_expenses)
+            )
 
-            if last > 2 * avg:
+            if latest_expense.amount > 2 * previous_average:
                 warnings.append({
                     "type": "UNUSUAL_SPENDING",
                     "category": category,
-                    "amount": last,
-                    "average": avg,
+                    "amount": latest_expense.amount,
+                    "average": previous_average,
                     "message": f"Unusual spending detected in {category}"
                 })
 
         return warnings
-
-    @staticmethod
-    def _normalize_category(category):
-        return str(category).strip().lower()

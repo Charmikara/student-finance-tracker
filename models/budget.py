@@ -1,3 +1,6 @@
+from utils.validators import normalize_category
+
+
 class Budget:
     """
     Represents a spending budget for a specific category.
@@ -9,15 +12,7 @@ class Budget:
 
     @staticmethod
     def _validate_category(category: str) -> str:
-        if not isinstance(category, str):
-            raise TypeError("Category must be a string.")
-
-        cleaned_category = category.strip()
-
-        if not cleaned_category:
-            raise ValueError("Category cannot be empty.")
-
-        return cleaned_category
+        return normalize_category(category)
 
     @staticmethod
     def _validate_limit(limit: float) -> float:

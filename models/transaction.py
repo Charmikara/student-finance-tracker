@@ -2,6 +2,8 @@ from abc import ABC
 from datetime import datetime
 from typing import Dict
 
+from utils.validators import normalize_category
+
 
 class Transaction(ABC):
     """
@@ -11,7 +13,7 @@ class Transaction(ABC):
 
     def __init__(self, amount: float, category: str, description: str, date: str) -> None:
         self._amount = self._validate_amount(amount)
-        self._category = self._validate_text_field(category, "category")
+        self._category = normalize_category(category)
         self._description = self._validate_text_field(description, "description")
         self._date = self._validate_date(date)
 

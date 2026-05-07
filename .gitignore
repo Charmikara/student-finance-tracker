@@ -1,4 +1,10 @@
 .env
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
+data/*.local.json
+data/*.tmp
+local_data/
+*.tmp

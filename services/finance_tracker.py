@@ -2,6 +2,7 @@ from models.expense import Expense
 from models.income import Income
 from models.budget import Budget
 from utils.file_manager import FileManager
+from utils.validators import normalize_category
 
 
 class FinanceTracker:
@@ -41,7 +42,7 @@ class FinanceTracker:
 
     def add_budget(self, category: str, limit: float) -> None:
         budget = Budget(category, limit)
-        self._budgets[budget.category] = budget
+        self._budgets[normalize_category(budget.category)] = budget
 
     def load(self) -> None:
         self._transactions = self._file_manager.load_transactions(self._transactions_file)
@@ -73,9 +74,8 @@ class FinanceTracker:
 
         for transaction in self._transactions:
             if transaction.get_transaction_type() == "expense":
-                category_totals[transaction.category] = (
-                    category_totals.get(transaction.category, 0) + transaction.amount
-                )
+                category = normalize_category(transaction.category)
+                category_totals[category] = category_totals.get(category, 0) + transaction.amount
 
         return category_totals
 
@@ -84,10 +84,11 @@ class FinanceTracker:
         status = {}
 
         for category, budget in self._budgets.items():
-            spent = category_spending.get(category, 0)
+            normalized_category = normalize_category(category)
+            spent = category_spending.get(normalized_category, 0)
             remaining = budget.limit - spent
 
-            status[category] = {
+            status[normalized_category] = {
                 "limit": budget.limit,
                 "spent": spent,
                 "remaining": remaining,
