@@ -20,6 +20,7 @@ This project is designed to be simple, readable, and suitable for university cou
 ```text
 student-finance-tracker/
 +-- main.py
++-- gui.py
 +-- models/
 +-- services/
 +-- utils/
@@ -32,6 +33,10 @@ student-finance-tracker/
 ### `main.py`
 
 Contains the interactive command-line menu. It creates a `FinanceTracker` object, loads existing JSON data, and lets the user choose actions such as adding transactions, viewing reports, checking budgets, and saving data.
+
+### `gui.py`
+
+Contains a simple Tkinter interface for the same tracker. It lets the user add income, expenses, and budgets, then refreshes transactions, reports, budget status, and warnings.
 
 ### `models/`
 
@@ -104,6 +109,12 @@ Run the application:
 
 ```bash
 python main.py
+```
+
+Run the optional Tkinter GUI:
+
+```bash
+python gui.py
 ```
 
 ## Sample Usage
