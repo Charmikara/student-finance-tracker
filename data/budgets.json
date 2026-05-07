@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "category": "food",
+    "limit": 200.0
+  },
+  {
+    "category": "transport",
+    "limit": 80.0
+  },
+  {
+    "category": "entertainment",
+    "limit": 100.0
+  }
+]

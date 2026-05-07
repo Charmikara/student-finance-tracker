@@ -3,42 +3,49 @@
     "type": "expense",
     "amount": 50.0,
     "category": "food",
-    "description": "No description",
+    "description": "Groceries",
     "date": "2026-05-07"
   },
   {
     "type": "expense",
     "amount": 80.0,
     "category": "food",
-    "description": "No description",
+    "description": "Eating out",
     "date": "2026-05-07"
   },
   {
     "type": "expense",
     "amount": 300.0,
     "category": "food",
-    "description": "No description",
+    "description": "Monthly meal plan",
     "date": "2026-05-07"
   },
   {
     "type": "expense",
     "amount": 30.0,
     "category": "transport",
-    "description": "No description",
+    "description": "Bus card top-up",
     "date": "2026-05-07"
   },
   {
     "type": "expense",
     "amount": 20.0,
     "category": "transport",
-    "description": "No description",
+    "description": "Taxi ride",
     "date": "2026-05-07"
   },
   {
     "type": "income",
     "amount": 1000.0,
     "category": "salary",
-    "description": "No description",
+    "description": "Part-time job salary",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "income",
+    "amount": 69.0,
+    "category": "fun",
+    "description": "beer",
     "date": "2026-05-07"
   }
 ]
