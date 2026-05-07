@@ -1,6 +1,7 @@
+from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
-from tkinter.scrolledtext import ScrolledText
+from tkinter import ttk
 
 from services.finance_tracker import FinanceTracker
 from services.report_generator import ReportGenerator
@@ -11,55 +12,172 @@ class StudentFinanceGUI:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("Student Finance Tracker")
+        self.root.geometry("980x720")
         self.tracker = FinanceTracker()
 
-        self._build_form()
-        self.overview_text = self._create_text_area("Overview", 8)
-        self.transactions_text = self._create_text_area("Transactions", 7)
-        self.report_text = self._create_text_area("Report", 6)
-        self.budget_text = self._create_text_area("Budget Status", 6)
-        self.warnings_text = self._create_text_area("Warnings", 5)
+        self.metric_labels = {}
 
+        self._build_layout()
         self.refresh()
 
-    def _build_form(self) -> None:
-        form = tk.Frame(self.root, padx=10, pady=10)
-        form.pack(fill="x")
+    def _build_layout(self) -> None:
+        notebook = ttk.Notebook(self.root)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.amount_entry = tk.Entry(form)
-        self.category_entry = tk.Entry(form)
-        self.description_entry = tk.Entry(form)
-        self.date_entry = tk.Entry(form)
+        self.dashboard_tab = ttk.Frame(notebook, padding=10)
+        self.transactions_tab = ttk.Frame(notebook, padding=10)
+        self.budgets_tab = ttk.Frame(notebook, padding=10)
+
+        notebook.add(self.dashboard_tab, text="Dashboard")
+        notebook.add(self.transactions_tab, text="Transactions")
+        notebook.add(self.budgets_tab, text="Budgets & Warnings")
+
+        self._build_dashboard_tab()
+        self._build_transactions_tab()
+        self._build_budgets_tab()
+
+    def _build_dashboard_tab(self) -> None:
+        overview = ttk.LabelFrame(self.dashboard_tab, text="Overview", padding=10)
+        overview.pack(fill="x", pady=(0, 10))
+
+        metrics = [
+            ("total_income", "Total Income"),
+            ("total_expenses", "Total Expenses"),
+            ("balance", "Balance"),
+            ("transactions", "Transactions"),
+            ("budgets", "Budgets"),
+            ("exceeded_budgets", "Exceeded Budgets"),
+            ("top_category", "Top Spending Category"),
+        ]
+
+        for index, (key, title) in enumerate(metrics):
+            card = ttk.Frame(overview, padding=10, relief="ridge")
+            card.grid(row=index // 4, column=index % 4, sticky="nsew", padx=5, pady=5)
+            ttk.Label(card, text=title).pack(anchor="w")
+            value_label = ttk.Label(card, text="-", font=("TkDefaultFont", 11, "bold"))
+            value_label.pack(anchor="w", pady=(6, 0))
+            self.metric_labels[key] = value_label
+
+        for column in range(4):
+            overview.columnconfigure(column, weight=1)
+
+        chart_frame = ttk.LabelFrame(
+            self.dashboard_tab,
+            text="Spending by Category",
+            padding=10,
+        )
+        chart_frame.pack(fill="both", expand=True)
+        self.spending_canvas = tk.Canvas(chart_frame, height=260, bg="white")
+        self.spending_canvas.pack(fill="both", expand=True)
+
+    def _build_transactions_tab(self) -> None:
+        form = ttk.LabelFrame(self.transactions_tab, text="Add Entry", padding=10)
+        form.pack(fill="x", pady=(0, 10))
+
+        self.amount_entry = ttk.Entry(form)
+        self.category_entry = ttk.Entry(form)
+        self.description_entry = ttk.Entry(form)
+        self.date_entry = ttk.Entry(form)
 
         self._add_labeled_entry(form, "Amount", self.amount_entry, 0)
         self._add_labeled_entry(form, "Category", self.category_entry, 1)
         self._add_labeled_entry(form, "Description", self.description_entry, 2)
         self._add_labeled_entry(form, "Date (YYYY-MM-DD)", self.date_entry, 3)
 
-        buttons = tk.Frame(form)
-        buttons.grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        buttons = ttk.Frame(form)
+        buttons.grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
-        tk.Button(buttons, text="Add Income", command=self.add_income).pack(side="left", padx=4)
-        tk.Button(buttons, text="Add Expense", command=self.add_expense).pack(side="left", padx=4)
-        tk.Button(buttons, text="Add Budget", command=self.add_budget).pack(side="left", padx=4)
-        tk.Button(buttons, text="Refresh", command=self.refresh).pack(side="left", padx=4)
-        tk.Button(buttons, text="Load Sample Data", command=self.load_sample_data).pack(side="left", padx=4)
-        tk.Button(buttons, text="Clear All Data", command=self.clear_all_data).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Add Income", command=self.add_income).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Add Expense", command=self.add_expense).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Add Budget", command=self.add_budget).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Refresh", command=self.refresh).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Load Sample Data", command=self.load_sample_data).pack(side="left", padx=4)
+        ttk.Button(buttons, text="Clear All Data", command=self.clear_all_data).pack(side="left", padx=4)
+
+        table_frame = ttk.LabelFrame(
+            self.transactions_tab,
+            text="Transactions",
+            padding=10,
+        )
+        table_frame.pack(fill="both", expand=True)
+
+        columns = ("type", "amount", "category", "description", "date")
+        self.transactions_tree = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=14,
+        )
+        headings = {
+            "type": "Type",
+            "amount": "Amount",
+            "category": "Category",
+            "description": "Description",
+            "date": "Date",
+        }
+        widths = {
+            "type": 90,
+            "amount": 90,
+            "category": 130,
+            "description": 320,
+            "date": 120,
+        }
+        for column in columns:
+            self.transactions_tree.heading(column, text=headings[column])
+            self.transactions_tree.column(column, width=widths[column], anchor="w")
+
+        scrollbar = ttk.Scrollbar(
+            table_frame,
+            orient="vertical",
+            command=self.transactions_tree.yview,
+        )
+        self.transactions_tree.configure(yscrollcommand=scrollbar.set)
+        self.transactions_tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+    def _build_budgets_tab(self) -> None:
+        budget_frame = ttk.LabelFrame(
+            self.budgets_tab,
+            text="Budget Status",
+            padding=10,
+        )
+        budget_frame.pack(fill="both", expand=True, pady=(0, 10))
+
+        columns = ("category", "spent", "limit", "remaining", "status")
+        self.budget_tree = ttk.Treeview(
+            budget_frame,
+            columns=columns,
+            show="headings",
+            height=10,
+        )
+        headings = {
+            "category": "Category",
+            "spent": "Spent",
+            "limit": "Limit",
+            "remaining": "Remaining",
+            "status": "Status",
+        }
+        for column in columns:
+            self.budget_tree.heading(column, text=headings[column])
+            self.budget_tree.column(column, width=140, anchor="w")
+
+        self.budget_tree.pack(fill="both", expand=True)
+
+        warnings_frame = ttk.LabelFrame(
+            self.budgets_tab,
+            text="Warnings",
+            padding=10,
+        )
+        warnings_frame.pack(fill="both", expand=True)
+
+        self.warnings_list = tk.Listbox(warnings_frame, height=8)
+        self.warnings_list.pack(fill="both", expand=True)
 
     @staticmethod
-    def _add_labeled_entry(parent: tk.Frame, label: str, entry: tk.Entry, row: int) -> None:
-        tk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=3)
+    def _add_labeled_entry(parent: ttk.Frame, label: str, entry: ttk.Entry, row: int) -> None:
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=3)
         entry.grid(row=row, column=1, sticky="ew", pady=3)
         parent.columnconfigure(1, weight=1)
-
-    def _create_text_area(self, title: str, height: int) -> ScrolledText:
-        frame = tk.LabelFrame(self.root, text=title, padx=8, pady=6)
-        frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-        text_area = ScrolledText(frame, height=height, wrap="word")
-        text_area.pack(fill="both", expand=True)
-        text_area.configure(state="disabled")
-        return text_area
 
     def add_income(self) -> None:
         try:
@@ -96,9 +214,8 @@ class StudentFinanceGUI:
             messagebox.showerror("Invalid input", str(error))
 
     def refresh(self) -> None:
-        self._show_overview()
+        self._show_dashboard()
         self._show_transactions()
-        self._show_report()
         self._show_budget_status()
         self._show_warnings()
 
@@ -131,7 +248,7 @@ class StudentFinanceGUI:
         self.refresh()
         messagebox.showinfo("Data Cleared", "All data cleared and saved.")
 
-    def _show_overview(self) -> None:
+    def _show_dashboard(self) -> None:
         report = ReportGenerator().generate_report(self.tracker.transactions)
         budget_status = self.tracker.get_budget_status()
         exceeded_count = sum(
@@ -140,75 +257,97 @@ class StudentFinanceGUI:
         )
         top_category = self._get_top_spending_category(report["category_spending"])
 
-        lines = [
-            f"Total income: {report['total_income']:.2f}",
-            f"Total expenses: {report['total_expense']:.2f}",
-            f"Balance: {report['balance']:.2f}",
-            f"Transactions: {len(self.tracker.transactions)}",
-            f"Budgets: {len(self.tracker.budgets)}",
-            f"Exceeded budgets: {exceeded_count}",
-            f"Top spending category: {top_category or 'None'}",
-            "",
-            "Spending by category:",
-        ]
+        values = {
+            "total_income": f"{report['total_income']:.2f}",
+            "total_expenses": f"{report['total_expense']:.2f}",
+            "balance": f"{report['balance']:.2f}",
+            "transactions": str(len(self.tracker.transactions)),
+            "budgets": str(len(self.tracker.budgets)),
+            "exceeded_budgets": str(exceeded_count),
+            "top_category": top_category or "None",
+        }
+        for key, value in values.items():
+            self.metric_labels[key].configure(text=value)
 
-        if report["category_spending"]:
-            max_amount = max(report["category_spending"].values())
-            for category, amount in report["category_spending"].items():
-                bar = self._make_bar(amount, max_amount)
-                lines.append(f"{category:15} {bar} {amount:.2f}")
-        else:
-            lines.append("No expenses found.")
+        self._draw_spending_chart(report["category_spending"])
 
-        self._set_text(self.overview_text, "\n".join(lines))
+    def _draw_spending_chart(self, category_spending: dict) -> None:
+        canvas = self.spending_canvas
+        canvas.delete("all")
 
-    def _show_transactions(self) -> None:
-        lines = [str(transaction) for transaction in self.tracker.transactions]
-        self._set_text(self.transactions_text, "\n".join(lines) or "No transactions found.")
-
-    def _show_report(self) -> None:
-        report = ReportGenerator().generate_report(self.tracker.transactions)
-        lines = [
-            f"Total income: {report['total_income']:.2f}",
-            f"Total expenses: {report['total_expense']:.2f}",
-            f"Balance: {report['balance']:.2f}",
-            "",
-            "Expenses by category:",
-        ]
-
-        if report["category_spending"]:
-            for category, amount in report["category_spending"].items():
-                lines.append(f"{category}: {amount:.2f}")
-        else:
-            lines.append("No expenses found.")
-
-        self._set_text(self.report_text, "\n".join(lines))
-
-    def _show_budget_status(self) -> None:
-        status = self.tracker.get_budget_status()
-        if not status:
-            self._set_text(self.budget_text, "No budgets found.")
+        if not category_spending:
+            canvas.create_text(20, 20, anchor="w", text="No expenses found.")
             return
 
-        lines = []
-        for category, details in status.items():
-            state = "Exceeded" if details["exceeded"] else "OK"
-            lines.append(
-                f"{category}: spent {details['spent']:.2f}, "
-                f"limit {details['limit']:.2f}, "
-                f"remaining {details['remaining']:.2f} ({state})"
+        max_amount = max(category_spending.values())
+        left_margin = 150
+        bar_height = 24
+        gap = 14
+        max_bar_width = 650
+
+        for index, (category, amount) in enumerate(category_spending.items()):
+            y = 20 + index * (bar_height + gap)
+            width = (amount / max_amount) * max_bar_width if max_amount else 0
+            canvas.create_text(10, y + 12, anchor="w", text=category)
+            canvas.create_rectangle(
+                left_margin,
+                y,
+                left_margin + width,
+                y + bar_height,
+                fill="#4f81bd",
+                outline="",
+            )
+            canvas.create_text(
+                left_margin + width + 8,
+                y + 12,
+                anchor="w",
+                text=f"{amount:.2f}",
             )
 
-        self._set_text(self.budget_text, "\n".join(lines))
+    def _show_transactions(self) -> None:
+        self.transactions_tree.delete(*self.transactions_tree.get_children())
+        for transaction in self.tracker.transactions:
+            self.transactions_tree.insert(
+                "",
+                tk.END,
+                values=(
+                    transaction.get_transaction_type(),
+                    f"{transaction.amount:.2f}",
+                    transaction.category,
+                    transaction.description,
+                    transaction.date,
+                ),
+            )
+
+    def _show_budget_status(self) -> None:
+        self.budget_tree.delete(*self.budget_tree.get_children())
+        for category, details in self.tracker.get_budget_status().items():
+            status = "Exceeded" if details["exceeded"] else "OK"
+            self.budget_tree.insert(
+                "",
+                tk.END,
+                values=(
+                    category,
+                    f"{details['spent']:.2f}",
+                    f"{details['limit']:.2f}",
+                    f"{details['remaining']:.2f}",
+                    status,
+                ),
+            )
 
     def _show_warnings(self) -> None:
+        self.warnings_list.delete(0, tk.END)
         warnings = WarningSystem().analyze(
             self.tracker.transactions,
             self.tracker.budgets,
             self.tracker.get_balance(),
         )
-        lines = [warning["message"] for warning in warnings]
-        self._set_text(self.warnings_text, "\n".join(lines) or "No warnings.")
+        if not warnings:
+            self.warnings_list.insert(tk.END, "- No warnings.")
+            return
+
+        for warning in warnings:
+            self.warnings_list.insert(tk.END, f"- {warning['message']}")
 
     @staticmethod
     def _get_top_spending_category(category_spending: dict) -> str | None:
@@ -218,41 +357,37 @@ class StudentFinanceGUI:
         category, amount = max(category_spending.items(), key=lambda item: item[1])
         return f"{category} ({amount:.2f})"
 
-    @staticmethod
-    def _make_bar(amount: float, max_amount: float) -> str:
-        if max_amount <= 0:
-            return ""
-
-        bar_length = max(1, round((amount / max_amount) * 20))
-        return "#" * bar_length
-
     def _get_transaction_input(self) -> tuple[float, str, str, str]:
         amount = self._get_amount()
         category = self._get_text(self.category_entry, "Category")
         description = self._get_text(self.description_entry, "Description")
-        date = self._get_text(self.date_entry, "Date")
+        date = self._get_valid_date()
         return amount, category, description, date
+
+    def _get_valid_date(self) -> str:
+        date_text = self._get_text(self.date_entry, "Date")
+        try:
+            datetime.strptime(date_text, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError("Date must be in YYYY-MM-DD format.") from exc
+        return date_text
 
     def _get_amount(self) -> float:
         value = self._get_text(self.amount_entry, "Amount")
-        amount = float(value)
+        try:
+            amount = float(value)
+        except ValueError as exc:
+            raise ValueError("Amount must be a valid number.") from exc
         if amount <= 0:
             raise ValueError("Amount must be greater than 0.")
         return amount
 
     @staticmethod
-    def _get_text(entry: tk.Entry, field_name: str) -> str:
+    def _get_text(entry: ttk.Entry, field_name: str) -> str:
         value = entry.get().strip()
         if not value:
             raise ValueError(f"{field_name} cannot be empty.")
         return value
-
-    @staticmethod
-    def _set_text(text_area: ScrolledText, content: str) -> None:
-        text_area.configure(state="normal")
-        text_area.delete("1.0", tk.END)
-        text_area.insert(tk.END, content)
-        text_area.configure(state="disabled")
 
     def _clear_inputs(self) -> None:
         for entry in (
