@@ -1,0 +1,72 @@
+[
+  {
+    "type": "expense",
+    "amount": 50.0,
+    "category": "food",
+    "description": "Groceries",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 80.0,
+    "category": "food",
+    "description": "Eating out",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 300.0,
+    "category": "food",
+    "description": "Monthly meal plan",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 30.0,
+    "category": "transport",
+    "description": "Bus card top-up",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 20.0,
+    "category": "transport",
+    "description": "Taxi ride",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "income",
+    "amount": 1000.0,
+    "category": "salary",
+    "description": "Part-time job salary",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 70.0,
+    "category": "subscriptions",
+    "description": "gym membership",
+    "date": "2026-05-06"
+  },
+  {
+    "type": "expense",
+    "amount": 50.0,
+    "category": "subscriptions",
+    "description": "netflix",
+    "date": "2026-05-06"
+  },
+  {
+    "type": "expense",
+    "amount": 250.0,
+    "category": "subscriptions",
+    "description": "ChatGPT Pro",
+    "date": "2026-05-06"
+  },
+  {
+    "type": "income",
+    "amount": 500.0,
+    "category": "freelancing",
+    "description": "art commissions",
+    "date": "2026-05-05"
+  }
+]

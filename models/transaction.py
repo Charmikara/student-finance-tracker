@@ -1,6 +1,5 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Dict
 
 from utils.validators import normalize_category
 
@@ -80,13 +79,13 @@ class Transaction(ABC):
     def type(self) -> str:
         return self.get_transaction_type()
 
+    @abstractmethod
     def get_transaction_type(self) -> str:
         """
         Must be overridden by subclasses.
         """
-        raise NotImplementedError("Subclasses must define the transaction type.")
 
-    def to_dict(self) -> Dict[str, str | float]:
+    def to_dict(self) -> dict[str, str | float]:
         """
         Convert transaction object into dictionary format for saving/exporting.
         """

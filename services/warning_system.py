@@ -52,7 +52,7 @@ class WarningSystem:
             return [{
                 "type": "LOW_BALANCE",
                 "balance": current_balance,
-                "message": f"Balance is low: {current_balance}"
+                "message": f"Balance is low: {current_balance:.2f}"
             }]
 
         return []
