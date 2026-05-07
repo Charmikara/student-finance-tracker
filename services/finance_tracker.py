@@ -1,6 +1,7 @@
 from models.expense import Expense
 from models.income import Income
 from models.budget import Budget
+from utils.file_manager import FileManager
 
 
 class FinanceTracker:
@@ -9,9 +10,18 @@ class FinanceTracker:
     managing budgets, and calculating financial summaries.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        transactions_file: str = "data/transactions.json",
+        budgets_file: str = "data/budgets.json",
+        file_manager: FileManager | None = None,
+    ) -> None:
+        self._transactions_file = transactions_file
+        self._budgets_file = budgets_file
+        self._file_manager = file_manager or FileManager()
         self._transactions = []
         self._budgets = {}
+        self.load()
 
     @property
     def transactions(self) -> list:
@@ -32,6 +42,14 @@ class FinanceTracker:
     def add_budget(self, category: str, limit: float) -> None:
         budget = Budget(category, limit)
         self._budgets[budget.category] = budget
+
+    def load(self) -> None:
+        self._transactions = self._file_manager.load_transactions(self._transactions_file)
+        self._budgets = self._file_manager.load_budgets(self._budgets_file)
+
+    def save(self) -> None:
+        self._file_manager.save_transactions(self._transactions, self._transactions_file)
+        self._file_manager.save_budgets(self._budgets, self._budgets_file)
 
     def get_total_income(self) -> float:
         return sum(

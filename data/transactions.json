@@ -1,1 +1,58 @@
-[{"amount": 50, "category": "food", "type": "expense"}, {"amount": 80, "category": "food", "type": "expense"}, {"amount": 300, "category": "food", "type": "expense"}, {"amount": 30, "category": "transport", "type": "expense"}, {"amount": 20, "category": "transport", "type": "expense"}, {"amount": 1000, "category": "salary", "type": "income"}]
+[
+  {
+    "type": "expense",
+    "amount": 50.0,
+    "category": "food",
+    "description": "Groceries",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 80.0,
+    "category": "food",
+    "description": "Eating out",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 300.0,
+    "category": "food",
+    "description": "Monthly meal plan",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 30.0,
+    "category": "transport",
+    "description": "Bus card top-up",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 20.0,
+    "category": "transport",
+    "description": "Taxi ride",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "income",
+    "amount": 1000.0,
+    "category": "salary",
+    "description": "Part-time job salary",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "income",
+    "amount": 69.0,
+    "category": "fun",
+    "description": "beer",
+    "date": "2026-05-07"
+  },
+  {
+    "type": "expense",
+    "amount": 123.0,
+    "category": "subscriptions",
+    "description": "gym membership",
+    "date": "2026-05-06"
+  }
+]
